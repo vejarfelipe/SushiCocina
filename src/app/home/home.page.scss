@@ -25,3 +25,140 @@
 #container a {
   text-decoration: none;
 }
+
+.orders-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+  padding: 1rem;
+}
+
+ion-card {
+  margin: 0;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+
+  &:hover {
+    transform: scale(1.02);
+  }
+
+  &.late-order {
+    border-left: 4px solid var(--ion-color-danger);
+  }
+
+  &.selected {
+    transform: scale(1.02);
+    box-shadow: 0 0 0 3px #3880ff;
+    transition: all 0.2s ease;
+  }
+}
+
+.time-display {
+  margin-right: 1rem;
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.late-orders {
+  margin-right: 1rem;
+  padding: 8px;
+}
+
+ion-card-content {
+  padding: 0;
+}
+
+ion-list {
+  padding: 0;
+}
+
+.kitchen-header {
+  ion-toolbar {
+    --min-height: 70px;
+  }
+
+  ion-title {
+    font-size: 1.4rem;
+    font-weight: 600;
+    
+    ion-icon {
+      margin-right: 8px;
+      font-size: 1.6rem;
+      vertical-align: middle;
+    }
+  }
+}
+
+.header-stats {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 24px;
+  padding-right: 16px;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  ion-icon {
+    font-size: 1.4rem;
+  }
+
+  .stat-value {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #2c3e50;
+    
+    &.danger {
+      color: var(--ion-color-danger);
+    }
+  }
+
+  .stat-label {
+    font-size: 0.9rem;
+    color: #6c757d;
+    
+    &.danger {
+      color: var(--ion-color-danger);
+    }
+  }
+}
+
+.custom-toolbar {
+  --background: #f8f9fa;
+  --color: #2c3e50;
+  --border-color: #e9ecef;
+  --border-width: 0 0 1px 0;
+  --border-style: solid;
+
+  ion-icon {
+    color: #2c3e50;
+  }
+}
+
+.keyboard-help {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(248, 249, 250, 0.9);
+  padding: 8px 16px;
+  text-align: center;
+  border-top: 1px solid #e9ecef;
+
+  p {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 0.9rem;
+
+    span {
+      margin: 0 12px;
+      padding: 4px 8px;
+      background: #e9ecef;
+      border-radius: 4px;
+      display: inline-block;
+    }
+  }
+}

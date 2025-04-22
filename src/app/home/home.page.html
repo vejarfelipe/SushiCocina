@@ -1,20 +1,69 @@
-<ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-title>
-      Blank
-    </ion-title>
+<ion-header [translucent]="true" class="kitchen-header">
+  <ion-toolbar class="custom-toolbar">
+    <ion-grid>
+      <ion-row class="ion-align-items-center">
+        <ion-col size="4">
+          <ion-title class="ion-no-padding">
+            <ion-icon name="restaurant-outline"></ion-icon>
+            {{ showingCompletedOrders ? 'Pedidos Finalizados' : 'Cocina' }}
+          </ion-title>
+        </ion-col>
+        
+        <ion-col size="8">
+          <div class="header-stats">
+            <div class="stat-item" *ngIf="!showingCompletedOrders">
+              <ion-icon name="receipt-outline"></ion-icon>
+              <span class="stat-value">{{activeOrders.length}}</span>
+              <span class="stat-label">Pedidos</span>
+            </div>
+
+            <div class="stat-item">
+              <ion-icon name="time-outline"></ion-icon>
+              <span class="stat-value">{{currentTime}}</span>
+            </div>
+
+            <div class="stat-item" *ngIf="getLateOrders() > 0 && !showingCompletedOrders">
+              <ion-icon name="warning" color="danger"></ion-icon>
+              <span class="stat-value danger">{{getLateOrders()}}</span>
+              <span class="stat-label danger">Atrasados</span>
+            </div>
+          </div>
+        </ion-col>
+      </ion-row>
+    </ion-grid>
   </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">Blank</ion-title>
-    </ion-toolbar>
-  </ion-header>
+  <div class="orders-grid">
+    <ion-card *ngFor="let order of displayedOrders; let i = index" 
+              [class.selected]="i === selectedOrderIndex"
+              [class.late-order]="!showingCompletedOrders && isLateOrder(order.orderTime)">
+      <ion-card-header>
+        <ion-card-subtitle>
+          <ion-text>Pedido: {{getOrderTimeString(order.orderTime)}}</ion-text>
+        </ion-card-subtitle>
+        <ion-card-title>{{order.clientName}}</ion-card-title>
+      </ion-card-header>
 
-  <div id="container">
-    <strong>Ready to create an app?</strong>
-    <p>Start with Ionic <a target="_blank" rel="noopener noreferrer" href="https://ionicframework.com/docs/components">UI Components</a></p>
+      <ion-card-content>
+        <ion-list>
+          <ion-item *ngFor="let item of order.items">
+            <ion-label>
+              <h3>{{item.name}}</h3>
+              <p>{{item.description}}</p>
+            </ion-label>
+          </ion-item>
+        </ion-list>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+  <div class="keyboard-help" *ngIf="displayedOrders.length > 0">
+    <p>Controles: 
+      <span>2,4,6,8 - Navegar</span>
+      <span *ngIf="!showingCompletedOrders">0 - Finalizar pedido</span>
+      <span>3 - {{ showingCompletedOrders ? 'Ver activos' : 'Ver finalizados' }}</span>
+    </p>
   </div>
 </ion-content>
