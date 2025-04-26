@@ -1,17 +1,51 @@
-import { Component, OnInit, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular';
+import { PedidosService } from '../services/pedidos/pedidos.service';
+import { ProductoService } from '../services/producto/producto.service';
+import { UsuarioService } from '../services/usuario/usuario.service';
+import { firstValueFrom } from 'rxjs';
+import { addIcons } from 'ionicons';
+import { checkmarkOutline, fastFoodOutline, warningOutline } from 'ionicons/icons';
 
-interface OrderItem {
-  name: string;
-  description: string;
+// Interfaces para los tipos de datos
+interface Producto {
+  id: string;
+  nombre: string;
+  descripcion: string;
+  precio: string;
+  categoria: string;
+  disponible: boolean;
 }
 
-interface Order {
-  id: number;
-  clientName: string;
-  orderTime: Date;
-  items: OrderItem[];
+interface Cliente {
+  uuid: string;
+  nombre: string;
+  apellido: string;
+  telefono: string;
+  direccion: string;
+}
+
+interface ItemPedido {
+  producto: string;
+  cantidad: number;
+  productoInfo?: Producto;
+}
+
+interface Pedido {
+  id: string;
+  cliente: string | null;
+  cliente_db: string;
+  detalle_pedido: ItemPedido[];
+  total: string;
+  fecha: string;
+  direccion: string;
+  estado: string;
+  observacion: string;
+  delivery: any;
+  cajero: string;
+  clienteInfo?: Cliente;
+  orderTime?: Date;
 }
 
 @Component({
@@ -21,77 +55,189 @@ interface Order {
   standalone: true,
   imports: [IonicModule, CommonModule],
 })
-export class HomePage implements OnInit {
+export class HomePage implements OnInit, OnDestroy {
   currentTime: string = '';
-  activeOrders: Order[] = [];
-  completedOrders: Order[] = [];
+  activeOrders: Pedido[] = [];
+  completedOrders: Pedido[] = [];
   selectedOrderIndex: number = 0;
   showingCompletedOrders: boolean = false;
-  columns: number = 3; // Número de columnas en el grid
+  columns: number = 3;
+  isLoading: boolean = true;
+  errorMessage: string | null = null;
+  private updateInterval: any;
 
-  constructor() {
-    // Sample orders for demonstration
-    this.activeOrders = [
-      {
-        id: 1,
-        clientName: 'Juan Pérez',
-        orderTime: new Date(),
-        items: [
-          { name: 'Hand Roll', description: 'Camarón, palta, envuelto en panko' },
-          { name: 'Gohan', description: 'Arroz blanco' }
-        ]
-      },
-      {
-        id: 2,
-        clientName: 'María González',
-        orderTime: new Date(Date.now() - 30 * 60000),
-        items: [
-          { name: 'Hand Roll', description: 'Salmón, queso crema' }
-        ]
-      }
-    ];
+  // Paginación
+  itemsPerPage: number = 8;
+  currentPage: number = 1;
+
+  constructor(
+    private pedidosService: PedidosService,
+    private productoService: ProductoService,
+    private usuarioService: UsuarioService
+  ) {
+    addIcons({
+      'checkmark-outline': checkmarkOutline,
+      'fast-food-outline': fastFoodOutline,
+      'warning-outline': warningOutline
+    });
   }
 
   @HostListener('window:keydown', ['$event'])
   handleKeyboardEvent(event: KeyboardEvent) {
-    const currentOrders = this.showingCompletedOrders ? this.completedOrders : this.activeOrders;
-    
+    const currentOrders = this.getCurrentPageOrders();
+    const columns = Math.floor(window.innerWidth / 280);
+
     switch(event.key) {
       case '4': // Izquierda
-        if (this.selectedOrderIndex % this.columns > 0) {
+        if (this.selectedOrderIndex % columns > 0) {
           this.selectedOrderIndex--;
         }
         break;
       case '6': // Derecha
-        if (this.selectedOrderIndex % this.columns < this.columns - 1 && 
+        if (this.selectedOrderIndex % columns < columns - 1 && 
             this.selectedOrderIndex < currentOrders.length - 1) {
           this.selectedOrderIndex++;
         }
         break;
       case '8': // Arriba
-        if (this.selectedOrderIndex >= this.columns) {
-          this.selectedOrderIndex -= this.columns;
+        if (this.selectedOrderIndex >= columns) {
+          this.selectedOrderIndex -= columns;
         }
         break;
       case '2': // Abajo
-        if (this.selectedOrderIndex + this.columns < currentOrders.length) {
-          this.selectedOrderIndex += this.columns;
+        if (this.selectedOrderIndex + columns < currentOrders.length) {
+          this.selectedOrderIndex += columns;
         }
         break;
       case '0': // Finalizar pedido
         if (!this.showingCompletedOrders && currentOrders[this.selectedOrderIndex]) {
-          this.completeOrder(currentOrders[this.selectedOrderIndex].id);
+          const order = currentOrders[this.selectedOrderIndex];
+          this.completeOrder(order.id, order.cliente_db);
         }
         break;
       case '3': // Cambiar entre activos y completados
         this.toggleOrdersView();
+        break;
+      case '7': // Página anterior
+        this.previousPage();
+        break;
+      case '9': // Página siguiente
+        this.nextPage();
         break;
     }
   }
 
   ngOnInit() {
     this.updateTime();
-    setInterval(() => this.updateTime(), 60000);
+    this.loadOrders();
+    this.updateInterval = setInterval(() => this.loadOrders(), 30000);
+  }
+
+  ngOnDestroy() {
+    if (this.updateInterval) {
+      clearInterval(this.updateInterval);
+    }
+  }
+
+  async loadOrders() {
+    try {
+      this.isLoading = true;
+      this.errorMessage = null;
+      
+      const pedidosResponse = await firstValueFrom(this.pedidosService.getAllOrders());
+      
+      if (!Array.isArray(pedidosResponse)) {
+        throw new Error('La respuesta de pedidos no es un array');
+      }
+
+      const clientesResponse = await firstValueFrom(this.usuarioService.obtenerClientes());
+      const clientesMap = new Map<string, Cliente>(
+        clientesResponse.map((c: any) => [c.uuid, c])
+      );
+
+      const pedidosPromises = pedidosResponse.map(async (pedido: any) => {
+        const pedidoEnriquecido: Pedido = {
+          ...pedido,
+          clienteInfo: clientesMap.get(pedido.cliente_db),
+          orderTime: this.parseFechaString(pedido.fecha)
+        };
+
+        const itemsPromises = pedido.detalle_pedido.map(async (item: any) => {
+          try {
+            const producto = await firstValueFrom(
+              this.productoService.obtenerProducto(item.producto)
+            );
+            return {
+              ...item,
+              productoInfo: producto
+            };
+          } catch (error) {
+            console.error(`Error obteniendo producto ${item.producto}:`, error);
+            return {
+              ...item,
+              productoInfo: {
+                id: item.producto,
+                nombre: 'Producto no encontrado',
+                descripcion: 'No disponible',
+                precio: '0',
+                categoria: 'ERROR',
+                disponible: false
+              }
+            };
+          }
+        });
+
+        pedidoEnriquecido.detalle_pedido = await Promise.all(itemsPromises);
+        return pedidoEnriquecido;
+      });
+
+      const allOrders = await Promise.all(pedidosPromises);
+      
+      // Separar pedidos activos y completados
+      this.activeOrders = allOrders.filter(order => order.estado === 'PREPARACION');
+      this.completedOrders = allOrders.filter(order => order.estado === 'LISTO');
+      
+      // Ajustar índice seleccionado si es necesario
+      const currentOrders = this.showingCompletedOrders ? this.completedOrders : this.activeOrders;
+      if (this.selectedOrderIndex >= currentOrders.length) {
+        this.selectedOrderIndex = Math.max(0, currentOrders.length - 1);
+      }
+    } catch (error) {
+      console.error('Error al cargar pedidos:', error);
+      this.errorMessage = 'Error al cargar pedidos. Intente nuevamente.';
+      this.activeOrders = [];
+      this.completedOrders = [];
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+  private parseFechaString(fechaString: string): Date {
+    try {
+      const [datePart, timePart] = fechaString.split(' ');
+      const [day, month, year] = datePart.split('-').map(Number);
+      const [hours, minutes] = timePart.split(':').map(Number);
+      const fullYear = 2000 + year;
+      return new Date(fullYear, month - 1, day, hours, minutes);
+    } catch (e) {
+      console.error('Error al parsear fecha:', e);
+      return new Date();
+    }
+  }
+
+  async completeOrder(orderId: string, cliente_db: string) {
+    try {
+      await firstValueFrom(this.pedidosService.updateOrderStatus(orderId, 'LISTO', cliente_db));
+      await this.loadOrders();
+    } catch (error) {
+      console.error('Error al finalizar pedido:', error);
+    }
+  }
+
+  toggleOrdersView() {
+    this.showingCompletedOrders = !this.showingCompletedOrders;
+    this.selectedOrderIndex = 0;
+    this.currentPage = 1;
   }
 
   updateTime() {
@@ -100,34 +246,68 @@ export class HomePage implements OnInit {
 
   getLateOrders(): number {
     const thirtyMinutesAgo = new Date(Date.now() - 30 * 60000);
-    return this.activeOrders.filter(order => order.orderTime < thirtyMinutesAgo).length;
+    return this.activeOrders.filter(order => {
+      return order.orderTime && order.orderTime < thirtyMinutesAgo;
+    }).length;
   }
 
-  completeOrder(orderId: number) {
-    const orderIndex = this.activeOrders.findIndex(order => order.id === orderId);
-    if (orderIndex !== -1) {
-      const completedOrder = this.activeOrders.splice(orderIndex, 1)[0];
-      this.completedOrders.unshift(completedOrder);
-      if (this.selectedOrderIndex >= this.activeOrders.length) {
-        this.selectedOrderIndex = Math.max(0, this.activeOrders.length - 1);
-      }
+  isOrderLate(fechaString: string): boolean {
+    const orderDate = this.parseFechaString(fechaString);
+    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60000);
+    return orderDate < thirtyMinutesAgo;
+  }
+
+  getNombreCliente(pedido: Pedido): string {
+    return pedido.clienteInfo ? 
+      `${pedido.clienteInfo.nombre} ${pedido.clienteInfo.apellido}` : 
+      'Cliente sin nombre';
+  }
+
+  getStatusColor(estado: string): string {
+    switch(estado) {
+      case 'PREPARACION': return 'warning';
+      case 'ENTREGADO': return 'success';
+      case 'CANCELADO': return 'danger';
+      default: return 'primary';
     }
   }
 
-  toggleOrdersView() {
-    this.showingCompletedOrders = !this.showingCompletedOrders;
-    this.selectedOrderIndex = 0;
+  get displayedOrders() {
+    return this.showingCompletedOrders ? this.completedOrders : this.activeOrders;
   }
 
   getOrderTimeString(date: Date): string {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
-  isLateOrder(orderTime: Date): boolean {
-    return orderTime < new Date(Date.now() - 30 * 60000);
+  async handleRefresh(event: any) {
+    await this.loadOrders();
+    event.target.complete();
   }
 
-  get displayedOrders() {
-    return this.showingCompletedOrders ? this.completedOrders : this.activeOrders;
+  // Métodos de paginación
+  getCurrentPageOrders(): Pedido[] {
+    const orders = this.showingCompletedOrders ? this.completedOrders : this.activeOrders;
+    const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+    return orders.slice(startIndex, startIndex + this.itemsPerPage);
+  }
+
+  getTotalPages(): number {
+    const orders = this.showingCompletedOrders ? this.completedOrders : this.activeOrders;
+    return Math.ceil(orders.length / this.itemsPerPage);
+  }
+
+  nextPage() {
+    if (this.currentPage < this.getTotalPages()) {
+      this.currentPage++;
+      this.selectedOrderIndex = 0;
+    }
+  }
+
+  previousPage() {
+    if (this.currentPage > 1) {
+      this.currentPage--;
+      this.selectedOrderIndex = 0;
+    }
   }
 }
