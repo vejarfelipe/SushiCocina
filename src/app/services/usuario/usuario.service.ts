@@ -14,5 +14,8 @@ export class UsuarioService {
   obtenerClientes(): Observable<any> {
     return this.http.get(`${this.backendUrl}Cliente/`);
   }
+  obtenerclientesid(id: string): Observable<any> {
+    return this.http.get(`${this.backendUrl}users/getUser/${id}`);
+  }
 
 }

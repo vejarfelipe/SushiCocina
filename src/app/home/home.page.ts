@@ -150,15 +150,48 @@ export class HomePage implements OnInit, OnDestroy {
         throw new Error('La respuesta de pedidos no es un array');
       }
 
+      console.log('=== TODOS LOS PEDIDOS RECIBIDOS ===');
+      pedidosResponse.forEach((pedido, index) => {
+        console.log(`\nPedido ${index + 1}:`, {
+          id: pedido.id,
+          cliente: pedido.cliente,
+          cliente_db: pedido.cliente_db,
+          estado: pedido.estado,
+          fecha: pedido.fecha,
+          detalle_pedido: pedido.detalle_pedido
+        });
+      });
+
+      // Primero obtenemos todos los clientes usando cliente_db
       const clientesResponse = await firstValueFrom(this.usuarioService.obtenerClientes());
+      console.log('\n=== TODOS LOS CLIENTES RECIBIDOS ===');
+      console.log(clientesResponse);
+
       const clientesMap = new Map<string, Cliente>(
         clientesResponse.map((c: any) => [c.uuid, c])
       );
 
       const pedidosPromises = pedidosResponse.map(async (pedido: any) => {
+        // Primero intentamos obtener el cliente usando cliente_db
+        let clienteInfo = clientesMap.get(pedido.cliente_db);
+        
+        // Si no encontramos el cliente en el map y cliente no es null, intentamos obtenerlo por cliente
+        if (!clienteInfo && pedido.cliente !== null) {
+          try {
+            console.log('Intentando obtener cliente con ID:', pedido.cliente);
+            if (pedido.cliente) {
+              clienteInfo = await firstValueFrom(this.usuarioService.obtenerclientesid(pedido.cliente));
+            } else {
+              console.error('ID de cliente no disponible');
+            }
+          } catch (error) {
+            console.error(`Error al obtener cliente individual:`, error);
+          }
+        }
+
         const pedidoEnriquecido: Pedido = {
           ...pedido,
-          clienteInfo: clientesMap.get(pedido.cliente_db),
+          clienteInfo: clienteInfo,
           orderTime: this.parseFechaString(pedido.fecha)
         };
 
