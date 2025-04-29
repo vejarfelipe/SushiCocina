@@ -11,6 +11,7 @@
       <ion-text slot="end" color="danger" *ngIf="!showingCompletedOrders && getLateOrders() > 0" class="pedidos-atrasados">
         {{getLateOrders()}} pedidos atrasados
       </ion-text>
+      <ion-spinner *ngIf="isUpdating" name="dots" slot="end" class="update-spinner"></ion-spinner>
     </ion-toolbar>
   </ion-header>
 

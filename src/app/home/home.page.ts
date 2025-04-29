@@ -63,6 +63,8 @@ export class HomePage implements OnInit, OnDestroy {
   showingCompletedOrders: boolean = false;
   columns: number = 3;
   isLoading: boolean = true;
+  isUpdating: boolean = false;
+  isInitialLoad: boolean = true;
   errorMessage: string | null = null;
   private updateInterval: any;
 
@@ -141,7 +143,11 @@ export class HomePage implements OnInit, OnDestroy {
 
   async loadOrders() {
     try {
-      this.isLoading = true;
+      if (this.isInitialLoad) {
+        this.isLoading = true;
+      } else {
+        this.isUpdating = true;
+      }
       this.errorMessage = null;
       
       const pedidosResponse = await firstValueFrom(this.pedidosService.getAllOrders());
@@ -172,10 +178,8 @@ export class HomePage implements OnInit, OnDestroy {
       );
 
       const pedidosPromises = pedidosResponse.map(async (pedido: any) => {
-        // Primero intentamos obtener el cliente usando cliente_db
         let clienteInfo = clientesMap.get(pedido.cliente_db);
         
-        // Si no encontramos el cliente en el map y cliente no es null, intentamos obtenerlo por cliente
         if (!clienteInfo && pedido.cliente !== null) {
           try {
             console.log('Intentando obtener cliente con ID:', pedido.cliente);
@@ -242,6 +246,8 @@ export class HomePage implements OnInit, OnDestroy {
       this.completedOrders = [];
     } finally {
       this.isLoading = false;
+      this.isUpdating = false;
+      this.isInitialLoad = false;
     }
   }
 
@@ -260,10 +266,19 @@ export class HomePage implements OnInit, OnDestroy {
 
   async completeOrder(orderId: string, cliente_db: string) {
     try {
+      const orderToComplete = this.activeOrders.find(order => order.id === orderId);
+      if (orderToComplete) {
+        this.activeOrders = this.activeOrders.filter(order => order.id !== orderId);
+        orderToComplete.estado = 'LISTO';
+        this.completedOrders = [orderToComplete, ...this.completedOrders];
+      }
+
       await firstValueFrom(this.pedidosService.updateOrderStatus(orderId, 'LISTO', cliente_db));
-      await this.loadOrders();
+      
+      this.loadOrders();
     } catch (error) {
-      console.error('Error al finalizar pedido:', error);
+      console.error('Error al completar pedido:', error);
+      this.loadOrders();
     }
   }
 
