@@ -26,11 +26,13 @@
   </div>
 
   <div *ngIf="!isLoading && !errorMessage" class="orders-grid">
-    <ion-card *ngFor="let order of getCurrentPageOrders(); let i = index"
-              [class.pedido-atrasado]="!showingCompletedOrders && isOrderLate(order.fecha)"
-              [class.selected]="i === selectedOrderIndex"
-              (click)="!showingCompletedOrders && completeOrder(order.id, order.cliente_db)"
-              (tap)="!showingCompletedOrders && completeOrder(order.id, order.cliente_db)">
+    <ion-card 
+  *ngFor="let order of getCurrentPageOrders(); let i = index"
+  [class.pedido-atrasado]="!showingCompletedOrders && isOrderLate(order.fecha)"
+  [class.selected]="i === selectedOrderIndex"
+  (click)="!showingCompletedOrders && completeOrder(order.id, order)"
+  (tap)="!showingCompletedOrders && completeOrder(order.id, order)">
+
       <ion-card-header>
         <ion-card-subtitle>
           {{order.fecha}}
@@ -50,10 +52,14 @@
           </ion-item>
         </ion-list>
 
-        <ion-button *ngIf="!showingCompletedOrders" expand="block" (click)="completeOrder(order.id, order.cliente_db)" color="primary">
-          LISTO
-          <ion-icon name="checkmark-outline" slot="end"></ion-icon>
-        </ion-button>
+        <ion-button 
+    *ngIf="!showingCompletedOrders" 
+    expand="block" 
+    (click)="completeOrder(order.id, order)" 
+    color="primary">
+    LISTO
+    <ion-icon name="checkmark-outline" slot="end"></ion-icon>
+  </ion-button>
       </ion-card-content>
     </ion-card>
 

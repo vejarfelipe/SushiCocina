@@ -35,7 +35,7 @@ interface ItemPedido {
 interface Pedido {
   id: string;
   cliente: string | null;
-  cliente_db: string;
+  cliente_db: string | null;
   detalle_pedido: ItemPedido[];
   total: string;
   fecha: string;
@@ -112,11 +112,11 @@ export class HomePage implements OnInit, OnDestroy {
         }
         break;
       case '0': // Finalizar pedido
-        if (!this.showingCompletedOrders && currentOrders[this.selectedOrderIndex]) {
-          const order = currentOrders[this.selectedOrderIndex];
-          this.completeOrder(order.id, order.cliente_db);
-        }
-        break;
+  if (!this.showingCompletedOrders && currentOrders[this.selectedOrderIndex]) {
+    const order = currentOrders[this.selectedOrderIndex];
+    this.completeOrder(order.id, order); // Enviamos el objeto completo
+  }
+  break;
       case '3': // Cambiar entre activos y completados
         this.toggleOrdersView();
         break;
@@ -264,23 +264,27 @@ export class HomePage implements OnInit, OnDestroy {
     }
   }
 
-  async completeOrder(orderId: string, cliente_db: string) {
-    try {
-      const orderToComplete = this.activeOrders.find(order => order.id === orderId);
-      if (orderToComplete) {
-        this.activeOrders = this.activeOrders.filter(order => order.id !== orderId);
-        orderToComplete.estado = 'LISTO';
-        this.completedOrders = [orderToComplete, ...this.completedOrders];
-      }
+  async completeOrder(orderId: string, order: Pedido) {
+  try {
+    this.activeOrders = this.activeOrders.filter(o => o.id !== orderId);
+    order.estado = 'LISTO';
+    this.completedOrders = [order, ...this.completedOrders];
 
-      await firstValueFrom(this.pedidosService.updateOrderStatus(orderId, 'LISTO', cliente_db));
-      
-      this.loadOrders();
-    } catch (error) {
-      console.error('Error al completar pedido:', error);
-      this.loadOrders();
-    }
+    // Envía los parámetros correctamente estructurados
+    await firstValueFrom(
+      this.pedidosService.updateOrderStatus({
+        id: orderId,
+        estado: 'LISTO',
+        cliente_db: order.cliente_db,
+        cliente: order.cliente
+      })
+    );
+    this.loadOrders();
+  } catch (error) {
+    console.error('Error al completar pedido:', error);
+    this.loadOrders();
   }
+}
 
   toggleOrdersView() {
     this.showingCompletedOrders = !this.showingCompletedOrders;
@@ -299,11 +303,15 @@ export class HomePage implements OnInit, OnDestroy {
     }).length;
   }
 
-  isOrderLate(fechaString: string): boolean {
-    const orderDate = this.parseFechaString(fechaString);
-    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60000);
-    return orderDate < thirtyMinutesAgo;
-  }
+ isOrderLate(fechaString: string): boolean {
+  if (this.showingCompletedOrders) return false; // No aplicar a completados
+  
+  const orderDate = this.parseFechaString(fechaString);
+  const thirtyMinutesAgo = new Date(Date.now() - 30 * 60000);
+  return orderDate < thirtyMinutesAgo;
+}
+
+
 
   getNombreCliente(pedido: Pedido): string {
     return pedido.clienteInfo ? 

@@ -29,7 +29,7 @@ interface DetallePedido {
 interface Pedido {
   id: string;
   cliente: string | null;
-  cliente_db: string;
+  cliente_db: string | null;
   detalle_pedido: DetallePedido[];
   total: string;
   fecha: string;
@@ -142,10 +142,17 @@ export class PedidosService {
     );
   }
 
-  updateOrderStatus(orderId: string, newStatus: string, cliente_db: string): Observable<any> {
-    return this.http.patch(`${this.backendUrl}Pedido/${orderId}`, {
-      estado: 'LISTO',
-      cliente_db: cliente_db
+  updateOrderStatus(params: {
+    id: string;
+    estado: string;
+    cliente_db?: string | null;
+    cliente?: string | null;
+  }): Observable<any> {
+    return this.http.patch(`${this.backendUrl}Pedido/${params.id}`, {
+      estado: params.estado,
+      cliente_db: params.cliente_db,
+      cliente: params.cliente
     });
   }
+
 }
