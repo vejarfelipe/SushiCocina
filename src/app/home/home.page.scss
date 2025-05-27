@@ -69,7 +69,7 @@ ion-card {
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   transition: all 0.3s ease;
   border: 2px solid transparent;
-  background: white;
+  background: rgb(58, 88, 79);
 
   &.pedido-atrasado {
     border: 3px solid #ff4961;
@@ -292,4 +292,11 @@ ion-header {
   --color: var(--ion-color-medium);
   width: 20px;
   height: 20px;
+}
+
+.current-time {
+  font-size: 3.2em;
+  font-weight: 500;
+  margin-right: 16px;
+  color: var(--ion-color-medium);
 }

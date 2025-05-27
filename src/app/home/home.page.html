@@ -8,6 +8,9 @@
           - Página {{currentPage}}/{{getTotalPages()}}
         </span>
       </ion-title>
+      <ion-text slot="end" class="current-time">
+        {{currentTime | date:'HH:mm:ss'}}
+      </ion-text>
       <ion-text slot="end" color="danger" *ngIf="!showingCompletedOrders && getLateOrders() > 0" class="pedidos-atrasados">
         {{getLateOrders()}} pedidos atrasados
       </ion-text>
@@ -35,7 +38,7 @@
 
       <ion-card-header>
         <ion-card-subtitle>
-          {{order.fecha}}
+          {{getOrderTimeString(order.orderTime)}}
         </ion-card-subtitle>
         <ion-card-title>
           {{getNombreCliente(order)}}

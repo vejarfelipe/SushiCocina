@@ -67,6 +67,7 @@ export class HomePage implements OnInit, OnDestroy {
   isInitialLoad: boolean = true;
   errorMessage: string | null = null;
   private updateInterval: any;
+  private timeInterval: any;
 
   // Paginación
   itemsPerPage: number = 8;
@@ -133,11 +134,15 @@ export class HomePage implements OnInit, OnDestroy {
     this.updateTime();
     this.loadOrders();
     this.updateInterval = setInterval(() => this.loadOrders(), 30000);
+    this.timeInterval = setInterval(() => this.updateTime(), 1000);
   }
 
   ngOnDestroy() {
     if (this.updateInterval) {
       clearInterval(this.updateInterval);
+    }
+    if (this.timeInterval) {
+      clearInterval(this.timeInterval);
     }
   }
 
@@ -257,7 +262,10 @@ export class HomePage implements OnInit, OnDestroy {
       const [day, month, year] = datePart.split('-').map(Number);
       const [hours, minutes] = timePart.split(':').map(Number);
       const fullYear = 2000 + year;
-      return new Date(fullYear, month - 1, day, hours, minutes);
+      const date = new Date(fullYear, month - 1, day, hours, minutes);
+      // Restar 4 horas al pedido
+      date.setHours(date.getHours() - 4);
+      return date;
     } catch (e) {
       console.error('Error al parsear fecha:', e);
       return new Date();
@@ -293,25 +301,23 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   updateTime() {
-    this.currentTime = new Date().toLocaleTimeString();
+    this.currentTime = new Date().toISOString();
   }
 
   getLateOrders(): number {
-    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60000);
+    const twentyMinutesAgo = new Date(Date.now() - 20 * 60000);
     return this.activeOrders.filter(order => {
-      return order.orderTime && order.orderTime < thirtyMinutesAgo;
+      return order.orderTime && order.orderTime < twentyMinutesAgo;
     }).length;
   }
 
- isOrderLate(fechaString: string): boolean {
-  if (this.showingCompletedOrders) return false; // No aplicar a completados
-  
-  const orderDate = this.parseFechaString(fechaString);
-  const thirtyMinutesAgo = new Date(Date.now() - 30 * 60000);
-  return orderDate < thirtyMinutesAgo;
-}
-
-
+  isOrderLate(fechaString: string): boolean {
+    if (this.showingCompletedOrders) return false; // No aplicar a completados
+    
+    const orderDate = this.parseFechaString(fechaString);
+    const twentyMinutesAgo = new Date(Date.now() - 20 * 60000);
+    return orderDate < twentyMinutesAgo;
+  }
 
   getNombreCliente(pedido: Pedido): string {
     return pedido.clienteInfo ? 
@@ -332,7 +338,10 @@ export class HomePage implements OnInit, OnDestroy {
     return this.showingCompletedOrders ? this.completedOrders : this.activeOrders;
   }
 
-  getOrderTimeString(date: Date): string {
+  getOrderTimeString(date: Date | undefined): string {
+    if (!date) {
+      return ''; // O puedes devolver un placeholder como 'N/A' si prefieres
+    }
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
