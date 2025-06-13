@@ -1,84 +1,122 @@
-<ion-content [fullscreen]="true">
-  <ion-header>
+<ion-content [fullscreen]="true" class="kitchen-dashboard">
+  <ion-header class="dashboard-header">
     <ion-toolbar>
-      <ion-title>
-        {{ showingCompletedOrders ? 'Pedidos Finalizados' : 'Pedidos en Preparación' }} 
-        ({{(showingCompletedOrders ? completedOrders : activeOrders).length}})
-        <span class="page-info" *ngIf="getTotalPages() > 1">
-          - Página {{currentPage}}/{{getTotalPages()}}
-        </span>
-      </ion-title>
-      <ion-text slot="end" class="current-time">
-        {{currentTime | date:'HH:mm:ss'}}
-      </ion-text>
-      <ion-text slot="end" color="danger" *ngIf="!showingCompletedOrders && getLateOrders() > 0" class="pedidos-atrasados">
-        {{getLateOrders()}} pedidos atrasados
-      </ion-text>
-      <ion-spinner *ngIf="isUpdating" name="dots" slot="end" class="update-spinner"></ion-spinner>
+      <div class="header-content">
+        <div class="header-left">
+          <ion-title class="dashboard-title">
+            <ion-icon name="restaurant-outline"></ion-icon>
+            {{ showingCompletedOrders ? 'Pedidos Finalizados' : 'Pedidos en Preparación' }}
+          </ion-title>
+          <div class="order-count">
+            {{(showingCompletedOrders ? completedOrders : activeOrders).length}} pedidos
+            <span class="page-info" *ngIf="getTotalPages() > 1">
+              • Página {{currentPage}}/{{getTotalPages()}}
+            </span>
+          </div>
+        </div>
+        
+        <div class="header-right">
+          <div class="time-display">
+            <ion-icon name="time-outline"></ion-icon>
+            {{currentTime | date:'HH:mm:ss'}}
+          </div>
+          
+          <div class="late-orders" *ngIf="!showingCompletedOrders && getLateOrders() > 0">
+            <ion-icon name="warning-outline"></ion-icon>
+            <span>{{getLateOrders()}} atrasados</span>
+          </div>
+          
+          <ion-spinner *ngIf="isUpdating" name="dots" class="update-spinner"></ion-spinner>
+        </div>
+      </div>
     </ion-toolbar>
   </ion-header>
 
-  <div *ngIf="isLoading" class="loading-spinner">
-    <ion-spinner name="crescent"></ion-spinner>
-    <p>Cargando pedidos...</p>
-  </div>
+  <div class="dashboard-content">
+    <div *ngIf="isLoading" class="loading-state">
+      <ion-icon name="time-outline" class="loading-icon"></ion-icon>
+      <p>Cargando pedidos...</p>
+    </div>
 
-  <div *ngIf="errorMessage" class="error-message">
-    <ion-icon name="warning-outline"></ion-icon>
-    <p>{{errorMessage}}</p>
-  </div>
+    <div *ngIf="errorMessage" class="error-state">
+      <ion-icon name="warning-outline"></ion-icon>
+      <p>{{errorMessage}}</p>
+    </div>
 
-  <div *ngIf="!isLoading && !errorMessage" class="orders-grid">
-    <ion-card 
-  *ngFor="let order of getCurrentPageOrders(); let i = index"
-  [class.pedido-atrasado]="!showingCompletedOrders && isOrderLate(order.fecha)"
-  [class.selected]="i === selectedOrderIndex"
-  (click)="!showingCompletedOrders && completeOrder(order.id, order)"
-  (tap)="!showingCompletedOrders && completeOrder(order.id, order)">
+    <div *ngIf="!isLoading && !errorMessage" class="orders-container">
+      <div class="orders-grid">
+        <ion-card 
+          *ngFor="let order of getCurrentPageOrders(); let i = index"
+          [class.pedido-atrasado]="!showingCompletedOrders && isOrderLate(order.fecha)"
+          [class.selected]="i === selectedOrderIndex"
+          (click)="!showingCompletedOrders && completeOrder(order.id, order)"
+          class="order-card">
+          
+          <div class="order-header">
+            <div class="order-time">
+              <ion-icon name="time-outline"></ion-icon>
+              {{getOrderTimeString(order.orderTime)}}
+            </div>
+            <div class="order-status" 
+                 [class.late]="!showingCompletedOrders && isOrderLate(order.fecha)"
+                 [class.finalizado]="showingCompletedOrders">
+              {{showingCompletedOrders ? 'FINALIZADO' : 
+                (!showingCompletedOrders && isOrderLate(order.fecha) ? 'ATRASADO' : 'EN PREPARACIÓN')}}
+            </div>
+          </div>
 
-      <ion-card-header>
-        <ion-card-subtitle>
-          {{getOrderTimeString(order.orderTime)}}
-        </ion-card-subtitle>
-        <ion-card-title>
-          {{getNombreCliente(order)}}
-        </ion-card-title>
-      </ion-card-header>
+          <div class="customer-info">
+            <ion-icon name="person-outline"></ion-icon>
+            <span>{{getNombreCliente(order)}}</span>
+          </div>
 
-      <ion-card-content>
-        <ion-list lines="none" class="productos-list">
-          <ion-item *ngFor="let item of order.detalle_pedido">
-            <ion-text>
-              <h2>• {{item.productoInfo?.nombre}}</h2>
-              <p class="producto-descripcion">{{item.productoInfo?.descripcion}} ({{item.cantidad}})</p>
-            </ion-text>
-          </ion-item>
-        </ion-list>
+          <div class="order-items">
+            <div class="item" *ngFor="let item of order.detalle_pedido">
+              <div class="item-quantity">{{item.cantidad}}x</div>
+              <div class="item-details">
+                <div class="item-name">{{item.productoInfo?.nombre}}</div>
+                <div class="item-description">{{item.productoInfo?.descripcion}}</div>
+              </div>
+            </div>
+          </div>
 
-        <ion-button 
-    *ngIf="!showingCompletedOrders" 
-    expand="block" 
-    (click)="completeOrder(order.id, order)" 
-    color="primary">
-    LISTO
-    <ion-icon name="checkmark-outline" slot="end"></ion-icon>
-  </ion-button>
-      </ion-card-content>
-    </ion-card>
+          <ion-button 
+            *ngIf="!showingCompletedOrders" 
+            expand="block" 
+            (click)="completeOrder(order.id, order)" 
+            class="complete-button">
+            <ion-icon name="checkmark-outline"></ion-icon>
+            <span class="button-text">MARCAR COMO LISTO</span>
+          </ion-button>
+        </ion-card>
+      </div>
 
-    <div *ngIf="(showingCompletedOrders ? completedOrders : activeOrders).length === 0" class="no-orders">
-      <ion-icon name="fast-food-outline"></ion-icon>
-      <p>No hay pedidos {{ showingCompletedOrders ? 'finalizados' : 'en preparación' }}</p>
+      <div *ngIf="(showingCompletedOrders ? completedOrders : activeOrders).length === 0" class="empty-state">
+        <ion-icon name="restaurant-outline" class="empty-icon"></ion-icon>
+        <p>No hay pedidos {{ showingCompletedOrders ? 'finalizados' : 'en preparación' }}</p>
+      </div>
     </div>
   </div>
 
-  <div class="keyboard-help" *ngIf="!isLoading">
-    <p>
-      <span>2,4,6,8 - Navegar</span>
-      <span *ngIf="!showingCompletedOrders">0 - Finalizar</span>
-      <span>3 - {{ showingCompletedOrders ? 'Ver Activos' : 'Ver Finalizados' }}</span>
-      <span *ngIf="getTotalPages() > 1">7,9 - Cambiar Página</span>
-    </p>
+  <div class="keyboard-shortcuts">
+    <div class="shortcut-group">
+      <div class="shortcut">
+        <span class="key">2,4,6,8</span>
+        <span class="description">Navegar</span>
+      </div>
+      <div class="shortcut" *ngIf="!showingCompletedOrders">
+        <span class="key">0</span>
+        <span class="description">Finalizar</span>
+      </div>
+      <div class="shortcut">
+        <span class="key">3</span>
+        <span class="description">{{ showingCompletedOrders ? 'Ver Activos' : 'Ver Finalizados' }}</span>
+      </div>
+      <div class="shortcut" *ngIf="getTotalPages() > 1">
+        <span class="key">7,9</span>
+        <span class="description">Cambiar Página</span>
+      </div>
+    </div>
   </div>
 
   <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">

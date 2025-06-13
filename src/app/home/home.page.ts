@@ -1,12 +1,14 @@
 import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonicModule } from '@ionic/angular';
+import { IonContent, IonHeader, IonToolbar, IonTitle, IonIcon, IonButton, IonCard, IonSpinner, IonRefresher, IonRefresherContent } from '@ionic/angular/standalone';
 import { PedidosService } from '../services/pedidos/pedidos.service';
 import { ProductoService } from '../services/producto/producto.service';
 import { UsuarioService } from '../services/usuario/usuario.service';
 import { firstValueFrom } from 'rxjs';
 import { addIcons } from 'ionicons';
-import { checkmarkOutline, fastFoodOutline, warningOutline } from 'ionicons/icons';
+import { checkmarkOutline, fastFoodOutline, warningOutline, timeOutline, restaurantOutline, personOutline } from 'ionicons/icons';
+import { HttpClientModule } from '@angular/common/http';
 
 // Interfaces para los tipos de datos
 interface Producto {
@@ -53,7 +55,22 @@ interface Pedido {
   templateUrl: 'home.page.html',
   styleUrls: ['home.page.scss'],
   standalone: true,
-  imports: [IonicModule, CommonModule],
+  imports: [
+    CommonModule,
+    IonicModule,
+    HttpClientModule,
+    IonContent,
+    IonHeader,
+    IonToolbar,
+    IonTitle,
+    IonIcon,
+    IonButton,
+    IonCard,
+    IonSpinner,
+    IonRefresher,
+    IonRefresherContent
+  ],
+  providers: [PedidosService, ProductoService, UsuarioService]
 })
 export class HomePage implements OnInit, OnDestroy {
   currentTime: string = '';
@@ -70,7 +87,7 @@ export class HomePage implements OnInit, OnDestroy {
   private timeInterval: any;
 
   // Paginación
-  itemsPerPage: number = 8;
+  itemsPerPage: number = 4;
   currentPage: number = 1;
 
   constructor(
@@ -81,7 +98,10 @@ export class HomePage implements OnInit, OnDestroy {
     addIcons({
       'checkmark-outline': checkmarkOutline,
       'fast-food-outline': fastFoodOutline,
-      'warning-outline': warningOutline
+      'warning-outline': warningOutline,
+      'time-outline': timeOutline,
+      'restaurant-outline': restaurantOutline,
+      'person-outline': personOutline
     });
   }
 
@@ -315,7 +335,7 @@ export class HomePage implements OnInit, OnDestroy {
     if (this.showingCompletedOrders) return false; // No aplicar a completados
     
     const orderDate = this.parseFechaString(fechaString);
-    const twentyMinutesAgo = new Date(Date.now() - 20 * 60000);
+    const twentyMinutesAgo = new Date(Date.now() - 15 * 60000);
     return orderDate < twentyMinutesAgo;
   }
 
