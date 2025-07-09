@@ -153,7 +153,7 @@ export class HomePage implements OnInit, OnDestroy {
   ngOnInit() {
     this.updateTime();
     this.loadOrders();
-    this.updateInterval = setInterval(() => this.loadOrders(), 30000);
+    this.updateInterval = setInterval(() => this.loadOrders(), 5000);
     this.timeInterval = setInterval(() => this.updateTime(), 1000);
   }
 
